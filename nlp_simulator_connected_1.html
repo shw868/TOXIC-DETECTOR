@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ToxiScan — NLP Hackathon Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0b0f;
+  --panel: #111318;
+  --panel2: #171b24;
+  --panel3: #1e2330;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.12);
+  --green: #00ff88;
+  --green-d: #00cc6a;
+  --green-glow: rgba(0,255,136,0.12);
+  --blue: #4da6ff;
+  --amber: #ffb347;
+  --red: #ff5555;
+  --purple: #b57bee;
+  --text: #e8edf5;
+  --text2: #7a8499;
+  --text3: #3d4558;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Space Grotesk', sans-serif;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none; z-index: 0;
+}
+
+.app {
+  position: relative; z-index: 1;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  grid-template-rows: 52px 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Topbar ── */
+.topbar {
+  grid-column: 1 / -1;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border2);
+  display: flex; align-items: center; padding: 0 20px; gap: 14px;
+}
+.logo-mark {
+  font-family: var(--mono); font-size: 15px; font-weight: 500;
+  color: var(--green); letter-spacing: -0.02em;
+}
+.logo-mark span { color: var(--text3); font-weight: 400; }
+.topbar-div { width: 1px; height: 18px; background: var(--border2); }
+.topbar-tag {
+  font-family: var(--mono); font-size: 10px; padding: 3px 9px;
+  border-radius: 3px; background: var(--green-glow); color: var(--green);
+  border: 1px solid rgba(0,255,136,0.18); letter-spacing: 0.04em;
+}
+.topbar-sub { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 8px var(--green);
+  animation: pulse 2.4s ease infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+.status-label { font-family: var(--mono); font-size: 11px; color: var(--text2); }
+
+/* ── Sidebar ── */
+.sidebar {
+  background: var(--panel);
+  border-right: 1px solid var(--border2);
+  overflow-y: auto; padding: 14px 0;
+  display: flex; flex-direction: column;
+}
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.nav-section { padding: 0 14px; margin-bottom: 18px; }
+.nav-label {
+  font-family: var(--mono); font-size: 9px; color: var(--text3);
+  letter-spacing: 0.15em; text-transform: uppercase;
+  margin-bottom: 5px; padding: 0 4px;
+}
+.nav-btn {
+  width: 100%; display: flex; align-items: center; gap: 9px;
+  padding: 8px 11px; border-radius: 6px; border: none;
+  background: transparent; color: var(--text2); font-family: var(--sans);
+  font-size: 13px; cursor: pointer; transition: all 0.15s; text-align: left;
+}
+.nav-btn:hover { background: var(--panel2); color: var(--text); }
+.nav-btn.active {
+  background: var(--green-glow); color: var(--green);
+  border: 1px solid rgba(0,255,136,0.14);
+}
+.nav-icon { font-size: 13px; width: 18px; text-align: center; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto; font-family: var(--mono); font-size: 10px;
+  padding: 1px 6px; border-radius: 3px;
+  background: var(--panel3); color: var(--text2);
+}
+
+/* Model state widget */
+.model-widget {
+  margin: auto 14px 14px;
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px;
+}
+.model-widget-label { font-family: var(--mono); font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 7px; }
+.model-widget-name { font-family: var(--mono); font-size: 12px; color: var(--green); }
+.model-widget-auc { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-top: 3px; }
+.progress-track { height: 4px; background: var(--panel3); border-radius: 2px; overflow: hidden; margin: 8px 0 3px; }
+.progress-fill { height: 100%; background: var(--green); border-radius: 2px; transition: width 0.3s ease; width: 0; box-shadow: 0 0 6px var(--green); }
+.progress-fill.amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+.model-widget-status { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+
+/* ── Main ── */
+.main { overflow-y: auto; }
+.main::-webkit-scrollbar { width: 4px; }
+.main::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.view { display: none; padding: 22px; }
+.view.active { display: block; animation: fadeIn 0.22s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+.view-title {
+  font-size: 10px; font-weight: 500; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.12em;
+  margin-bottom: 18px; font-family: var(--mono);
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius); margin-bottom: 12px; overflow: hidden;
+}
+.card-head {
+  padding: 11px 15px; background: var(--panel2);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.card-head-title { font-family: var(--mono); font-size: 11px; color: var(--text2); letter-spacing: 0.04em; }
+.card-body { padding: 15px; }
+
+/* ── Grids ── */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+/* ── Metrics ── */
+.metric {
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 13px 15px;
+}
+.metric-label { font-family: var(--mono); font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 5px; }
+.metric-value { font-family: var(--mono); font-size: 24px; font-weight: 500; }
+.metric-value.green { color: var(--green); }
+.metric-value.blue { color: var(--blue); }
+.metric-value.amber { color: var(--amber); }
+.metric-value.red { color: var(--red); }
+.metric-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+/* ── Model selector ── */
+.model-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.model-card {
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 13px; cursor: pointer;
+  transition: all 0.15s; text-align: center;
+}
+.model-card:hover { border-color: var(--border2); }
+.model-card.selected { border-color: var(--green); background: var(--green-glow); }
+.model-card.selected .model-name { color: var(--green); }
+.model-name { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.model-desc { font-size: 11px; color: var(--text2); line-height: 1.4; margin-bottom: 7px; }
+.model-auc { font-family: var(--mono); font-size: 11px; }
+.model-auc.green { color: var(--green); }
+.model-auc.blue { color: var(--blue); }
+.model-auc.amber { color: var(--amber); }
+
+/* ── Controls ── */
+.control-row { margin-bottom: 13px; }
+.control-label { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 12px; }
+.control-name { color: var(--text2); }
+.control-val { font-family: var(--mono); font-size: 12px; color: var(--green); }
+input[type=range] {
+  width: 100%; height: 3px; border-radius: 2px; outline: none;
+  appearance: none; background: var(--panel3); cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  appearance: none; width: 13px; height: 13px;
+  border-radius: 50%; background: var(--green); cursor: pointer;
+  box-shadow: 0 0 5px var(--green);
+}
+.select-input {
+  width: 100%; background: var(--panel2); border: 1px solid var(--border);
+  color: var(--text); font-family: var(--mono); font-size: 12px;
+  padding: 8px 12px; border-radius: 6px; outline: none; cursor: pointer;
+}
+.select-input:focus { border-color: var(--border2); }
+
+/* ── Buttons ── */
+.btn-primary {
+  background: var(--green); color: #050f08;
+  font-family: var(--mono); font-size: 12px; font-weight: 600;
+  border: none; padding: 9px 20px; border-radius: 6px;
+  cursor: pointer; transition: all 0.15s; letter-spacing: 0.02em;
+}
+.btn-primary:hover { background: var(--green-d); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-secondary {
+  background: transparent; color: var(--text2);
+  font-family: var(--mono); font-size: 12px;
+  border: 1px solid var(--border2); padding: 8px 15px; border-radius: 6px;
+  cursor: pointer; transition: all 0.15s;
+}
+.btn-secondary:hover { color: var(--text); border-color: var(--text3); }
+
+/* ── Terminal ── */
+.terminal {
+  background: #080a0d; border: 1px solid var(--border2);
+  border-radius: 8px; padding: 13px;
+  font-family: var(--mono); font-size: 12px;
+  min-height: 200px; max-height: 300px; overflow-y: auto;
+  line-height: 1.85;
+}
+.terminal::-webkit-scrollbar { width: 3px; }
+.terminal::-webkit-scrollbar-thumb { background: var(--border2); }
+.t-green { color: var(--green); }
+.t-blue { color: var(--blue); }
+.t-amber { color: var(--amber); }
+.t-red { color: var(--red); }
+.t-dim { color: var(--text3); }
+.t-white { color: var(--text); }
+.cursor { display: inline-block; width: 7px; height: 13px; background: var(--green); animation: blink 1s step-end infinite; vertical-align: text-bottom; }
+@keyframes blink { 50%{opacity:0} }
+
+/* ── Accuracy bars ── */
+.acc-grid { display: flex; flex-direction: column; gap: 7px; }
+.acc-row { display: grid; grid-template-columns: 110px 1fr 50px; align-items: center; gap: 10px; font-size: 12px; }
+.acc-label { font-family: var(--mono); color: var(--text2); }
+.acc-track { height: 5px; background: var(--panel3); border-radius: 3px; overflow: hidden; }
+.acc-fill { height: 100%; border-radius: 3px; transition: width 0.85s cubic-bezier(.4,0,.2,1); width: 0; }
+.acc-fill.green { background: var(--green); }
+.acc-fill.blue { background: var(--blue); }
+.acc-fill.amber { background: var(--amber); }
+.acc-fill.red { background: var(--red); }
+.acc-val { font-family: var(--mono); font-size: 11px; text-align: right; color: var(--text2); }
+
+/* ── Confusion matrix ── */
+.matrix-wrap { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.matrix-cell { background: var(--panel2); border-radius: 6px; padding: 12px; text-align: center; }
+.matrix-num { font-family: var(--mono); font-size: 20px; font-weight: 500; }
+.matrix-lbl { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+/* ── Predict ── */
+textarea.predict-input {
+  width: 100%; background: var(--panel2); border: 1px solid var(--border);
+  color: var(--text); font-family: var(--sans); font-size: 14px;
+  font-weight: 300; padding: 13px; border-radius: 8px; resize: none;
+  min-height: 88px; outline: none; line-height: 1.65; transition: border-color 0.15s;
+}
+textarea.predict-input:focus { border-color: rgba(0,255,136,0.25); }
+textarea.predict-input::placeholder { color: var(--text3); }
+
+.lang-tag {
+  font-family: var(--mono); font-size: 10px;
+  padding: 2px 8px; border-radius: 3px;
+  background: rgba(77,166,255,0.1); color: var(--blue);
+  border: 1px solid rgba(77,166,255,0.2);
+}
+
+/* Translation pill */
+.translation-pill {
+  background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.12);
+  border-radius: 6px; padding: 9px 13px; margin-top: 10px; margin-bottom: 4px;
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.translation-pill-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+.translation-pill-body {}
+.translation-pill-label { font-family: var(--mono); font-size: 9px; color: var(--green); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 3px; }
+.translation-pill-text { font-size: 12px; color: var(--text2); font-style: italic; line-height: 1.5; }
+
+.verdict-block {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 15px; border-radius: 8px; margin-bottom: 12px; border: 1px solid;
+}
+.verdict-block.safe { background: rgba(0,255,136,0.04); border-color: rgba(0,255,136,0.18); }
+.verdict-block.caution { background: rgba(255,179,71,0.04); border-color: rgba(255,179,71,0.18); }
+.verdict-block.toxic { background: rgba(255,85,85,0.04); border-color: rgba(255,85,85,0.18); }
+.verdict-label { font-family: var(--mono); font-size: 14px; font-weight: 600; }
+.verdict-label.safe { color: var(--green); }
+.verdict-label.caution { color: var(--amber); }
+.verdict-label.toxic { color: var(--red); }
+.verdict-reason { font-size: 12px; color: var(--text2); margin-left: auto; max-width: 58%; text-align: right; line-height: 1.4; }
+
+/* Chips */
+.chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+.chip {
+  font-size: 11px; color: var(--text2); background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 4px;
+  padding: 4px 10px; cursor: pointer; transition: all 0.12s;
+  max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.chip:hover { border-color: var(--border2); color: var(--text); }
+
+/* History */
+.history-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 14px; border-bottom: 1px solid var(--border); font-size: 12px;
+}
+.history-item:last-child { border-bottom: none; }
+.history-text { flex: 1; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-lang { font-family: var(--mono); font-size: 10px; color: var(--blue); flex-shrink: 0; }
+.history-v { font-family: var(--mono); font-size: 10px; flex-shrink: 0; }
+.history-v.safe { color: var(--green); }
+.history-v.caution { color: var(--amber); }
+.history-v.toxic { color: var(--red); }
+
+/* Comparison table */
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.cmp-table th { font-family: var(--mono); font-size: 10px; color: var(--text3); text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 400; }
+.cmp-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--text2); }
+.cmp-table tr:last-child td { border-bottom: none; }
+.cmp-table .best { color: var(--green); font-weight: 500; }
+
+/* Spinner */
+.spin { display: inline-block; width: 11px; height: 11px; border: 2px solid rgba(0,255,136,0.15); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 5px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Toggle */
+.toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.toggle-track { width: 34px; height: 19px; background: var(--panel3); border-radius: 10px; position: relative; transition: background 0.2s; flex-shrink: 0; }
+.toggle-track.on { background: rgba(0,255,136,0.25); }
+.toggle-thumb { width: 13px; height: 13px; background: var(--text3); border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: all 0.2s; }
+.toggle-track.on .toggle-thumb { left: 18px; background: var(--green); box-shadow: 0 0 5px var(--green); }
+.toggle-label { font-size: 12px; color: var(--text2); }
+
+/* ── Bulk URL input ── */
+.url-input-row {
+  display: flex; gap: 8px; margin-bottom: 12px; align-items: center;
+}
+.url-input {
+  flex: 1; background: var(--panel2); border: 1px solid var(--border);
+  color: var(--text); font-family: var(--mono); font-size: 12px;
+  padding: 9px 13px; border-radius: 6px; outline: none; transition: border-color 0.15s;
+}
+.url-input:focus { border-color: rgba(0,255,136,0.25); }
+.url-input::placeholder { color: var(--text3); }
+.platform-badge {
+  font-family: var(--mono); font-size: 10px; padding: 2px 8px; border-radius: 3px;
+  border: 1px solid;
+}
+.platform-badge.youtube { background: rgba(255,0,0,0.08); color: #ff4444; border-color: rgba(255,0,0,0.2); }
+.platform-badge.instagram { background: rgba(225,100,200,0.08); color: #e164c8; border-color: rgba(225,100,200,0.2); }
+.platform-badge.facebook { background: rgba(66,103,178,0.15); color: #7599e0; border-color: rgba(66,103,178,0.3); }
+.platform-badge.twitter { background: rgba(77,166,255,0.08); color: var(--blue); border-color: rgba(77,166,255,0.2); }
+
+/* Language grid in About */
+.lang-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+.lang-item {
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 11px;
+}
+.lang-item-name { font-size: 12px; color: var(--text); }
+.lang-item-sub { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+/* Section divider */
+.section-sep { height: 1px; background: var(--border); margin: 16px 0; }
+
+/* Info box */
+.info-box {
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 15px;
+  font-size: 12px; color: var(--text2); line-height: 1.7;
+}
+.info-box.blue { border-color: rgba(77,166,255,0.2); background: rgba(77,166,255,0.04); }
+.info-box.amber { border-color: rgba(255,179,71,0.2); background: rgba(255,179,71,0.04); }
+.info-box.green { border-color: rgba(0,255,136,0.18); background: rgba(0,255,136,0.04); }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ── Topbar ── -->
+<div class="topbar">
+  <div class="logo-mark">TOXI<span>/</span>SCAN</div>
+  <div class="topbar-div"></div>
+  <div class="topbar-tag">HACKATHON</div>
+  <div class="topbar-div"></div>
+  <span class="topbar-sub">Multilingual Toxic Comment Detector · 22 Languages · 6 Labels</span>
+  <div class="topbar-right">
+    <div class="status-dot"></div>
+    <span class="status-label" id="topStatus">API ready</span>
+  </div>
+</div>
+
+<!-- ── Sidebar ── -->
+<div class="sidebar">
+  <div class="nav-section">
+    <div class="nav-label">Setup</div>
+    <button class="nav-btn active" onclick="nav('train',this)"><span class="nav-icon">⚙️</span>Train Model</button>
+    <button class="nav-btn" onclick="nav('compare',this)"><span class="nav-icon">📊</span>Compare Models</button>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Inference</div>
+    <button class="nav-btn" onclick="nav('predict',this)"><span class="nav-icon">🔍</span>Live Predict<span class="nav-badge" id="histBadge">0</span></button>
+    <button class="nav-btn" onclick="nav('bulk',this)"><span class="nav-icon">📋</span>Bulk Scan</button>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Analysis</div>
+    <button class="nav-btn" onclick="nav('accuracy',this)"><span class="nav-icon">🎯</span>Accuracy Report</button>
+    <button class="nav-btn" onclick="nav('languages',this)"><span class="nav-icon">🌐</span>Languages</button>
+  </div>
+
+  <div class="model-widget">
+    <div class="model-widget-label">Active Model</div>
+    <div class="model-widget-name" id="activeModelLabel">None trained</div>
+    <div class="model-widget-auc" id="activeModelAuc">—</div>
+    <div class="progress-track"><div class="progress-fill" id="sidebarProgress" style="width:0%"></div></div>
+    <div class="model-widget-status" id="sidebarProgressLabel">not started</div>
+  </div>
+</div>
+
+<!-- ── Main ── -->
+<div class="main">
+
+  <!-- ═══ TRAIN ═══ -->
+  <div class="view active" id="view-train">
+    <div class="view-title">// model training lab</div>
+
+    <div class="model-grid">
+      <div class="model-card selected" onclick="selectModel('tfidf',this)">
+        <div class="model-name">TF-IDF + LR</div>
+        <div class="model-desc">Fast baseline. CPU only. Quick submission.</div>
+        <div class="model-auc amber">ROC-AUC ~0.94</div>
+      </div>
+      <div class="model-card" onclick="selectModel('distilbert',this)">
+        <div class="model-name">DistilBERT</div>
+        <div class="model-desc">Best for hackathon. Colab GPU. 30–60 min.</div>
+        <div class="model-auc green">ROC-AUC ~0.984</div>
+      </div>
+      <div class="model-card" onclick="selectModel('ensemble',this)">
+        <div class="model-name">Ensemble</div>
+        <div class="model-desc">Combine both. Max accuracy. Last resort.</div>
+        <div class="model-auc blue">ROC-AUC ~0.988</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head"><span class="card-head-title">// hyperparameters</span></div>
+        <div class="card-body">
+          <div id="params-tfidf">
+            <div class="control-row">
+              <div class="control-label"><span class="control-name">C (regularization)</span><span class="control-val" id="val-C">1.0</span></div>
+              <input type="range" min="1" max="20" value="10" oninput="document.getElementById('val-C').textContent=(this.value/10).toFixed(1)">
+            </div>
+            <div class="control-row">
+              <div class="control-label"><span class="control-name">Max features</span><span class="control-val" id="val-feat">50,000</span></div>
+              <input type="range" min="1" max="20" value="10" oninput="document.getElementById('val-feat').textContent=(this.value*5000).toLocaleString()">
+            </div>
+            <div class="control-row">
+              <div class="control-label"><span class="control-name">N-gram range</span><span class="control-val" id="val-ngram">(1,2)</span></div>
+              <input type="range" min="1" max="3" value="2" step="1" oninput="document.getElementById('val-ngram').textContent='(1,'+this.value+')'">
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;">
+              <div class="toggle" onclick="toggleClassWeight()">
+                <div class="toggle-track on" id="cwToggle"><div class="toggle-thumb"></div></div>
+                <span class="toggle-label">class_weight='balanced'</span>
+              </div>
+            </div>
+          </div>
+          <div id="params-distilbert" style="display:none">
+            <div class="control-row">
+              <div class="control-label"><span class="control-name">Learning rate</span><span class="control-val" id="val-lr">2e-5</span></div>
+              <input type="range" min="1" max="5" value="2" step="1" oninput="setLR(this.value)">
+            </div>
+            <div class="control-row">
+              <div class="control-label"><span class="control-name">Batch size</span><span class="control-val" id="val-bs">16</span></div>
+              <input type="range" min="1" max="4" value="2" step="1" oninput="setBatch(this.value)">
+            </div>
+            <div class="control-row">
+              <div class="control-label"><span class="control-name">Epochs</span><span class="control-val" id="val-ep">3</span></div>
+              <input type="range" min="1" max="5" value="3" step="1" oninput="document.getElementById('val-ep').textContent=this.value">
+            </div>
+          </div>
+          <div id="params-ensemble" style="display:none">
+            <div class="control-row">
+              <div class="control-label"><span class="control-name">TF-IDF weight</span><span class="control-val" id="val-w1">40%</span></div>
+              <input type="range" min="10" max="90" value="40" oninput="document.getElementById('val-w1').textContent=this.value+'%';document.getElementById('val-w2').textContent=(100-this.value)+'%'">
+            </div>
+            <div class="control-row">
+              <div class="control-label"><span class="control-name">BERT weight</span><span class="control-val" id="val-w2">60%</span></div>
+            </div>
+            <div class="info-box" style="margin-top:8px;">Both models must be trained first. Ensemble averages their probability outputs — often adds +0.3–0.8% AUC for free.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-head-title">// imbalance strategy</span></div>
+        <div class="card-body">
+          <div class="control-row">
+            <div class="control-label"><span class="control-name">Strategy</span></div>
+            <select class="select-input" id="imbalanceStrategy">
+              <option value="balanced">class_weight='balanced' (recommended)</option>
+              <option value="focal">Focal loss (advanced)</option>
+              <option value="oversample">SMOTE oversampling</option>
+              <option value="threshold">Threshold tuning only</option>
+              <option value="none">None (baseline comparison)</option>
+            </select>
+          </div>
+          <div class="info-box" style="margin-top:10px;" id="strategyNote">
+            Adjusts loss weights inversely proportional to class frequency. Best for beginners — one parameter, big gain on rare labels.
+          </div>
+          <div style="margin-top:14px;">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-bottom:7px;text-transform:uppercase;letter-spacing:0.08em;">Class distribution</div>
+            <div class="acc-grid">
+              <div class="acc-row"><span class="acc-label">toxic</span><div class="acc-track"><div class="acc-fill green" style="width:10.5%"></div></div><span class="acc-val">10.5%</span></div>
+              <div class="acc-row"><span class="acc-label">insult</span><div class="acc-track"><div class="acc-fill blue" style="width:5.4%"></div></div><span class="acc-val">5.4%</span></div>
+              <div class="acc-row"><span class="acc-label">obscene</span><div class="acc-track"><div class="acc-fill amber" style="width:4.9%"></div></div><span class="acc-val">4.9%</span></div>
+              <div class="acc-row"><span class="acc-label">identity_hate</span><div class="acc-track"><div class="acc-fill red" style="width:0.9%"></div></div><span class="acc-val">0.9%</span></div>
+              <div class="acc-row"><span class="acc-label">severe_toxic</span><div class="acc-track"><div class="acc-fill red" style="width:0.9%"></div></div><span class="acc-val">0.9%</span></div>
+              <div class="acc-row"><span class="acc-label">threat</span><div class="acc-track"><div class="acc-fill red" style="width:0.4%"></div></div><span class="acc-val">0.4%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="card-head-title">// training terminal</span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-secondary" onclick="clearTerminal()" style="font-size:11px;padding:5px 11px;">Clear</button>
+          <button class="btn-primary" id="trainBtn" onclick="startTraining()">▶ Start Training</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding:13px;">
+        <div class="terminal" id="terminal">
+          <span class="t-dim">// ToxiScan — ready</span><br>
+          <span class="t-dim">// Select a model, configure hyperparameters, then click Start Training</span><br>
+          <span class="t-green">$ </span><span class="cursor"></span>
+        </div>
+        <div class="progress-track" style="margin-top:10px;height:5px;"><div class="progress-fill" id="trainProgress"></div></div>
+        <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:4px;">
+          <span id="progressLabel">waiting...</span>
+          <span id="progressPct">0%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ COMPARE ═══ -->
+  <div class="view" id="view-compare">
+    <div class="view-title">// model comparison</div>
+    <div class="card">
+      <div class="card-head"><span class="card-head-title">// performance benchmark</span></div>
+      <div class="card-body">
+        <table class="cmp-table">
+          <thead><tr><th>Model</th><th>ROC-AUC</th><th>F1 (macro)</th><th>Train time</th><th>Inference</th><th>Colab GPU?</th></tr></thead>
+          <tbody>
+            <tr><td>Keyword blocklist</td><td class="t-red">~0.55</td><td class="t-red">~0.30</td><td>0 min</td><td>&lt;1ms</td><td>No</td></tr>
+            <tr><td>TF-IDF + Logistic Reg</td><td class="t-amber">~0.940</td><td class="t-amber">~0.62</td><td>2–5 min</td><td>5ms</td><td>No (CPU)</td></tr>
+            <tr><td>TF-IDF + LinearSVC</td><td class="t-amber">~0.955</td><td class="t-amber">~0.65</td><td>3–6 min</td><td>5ms</td><td>No (CPU)</td></tr>
+            <tr><td>BiLSTM + GloVe</td><td class="t-blue">~0.972</td><td class="t-blue">~0.74</td><td>20–40 min</td><td>30ms</td><td>Yes</td></tr>
+            <tr><td class="best">DistilBERT (fine-tune)</td><td class="best">~0.984</td><td class="best">~0.82</td><td>30–60 min</td><td>50ms</td><td>Yes</td></tr>
+            <tr><td>BERT-base (fine-tune)</td><td class="t-green">~0.987</td><td class="t-green">~0.84</td><td>60–120 min</td><td>80ms</td><td>Yes (Pro)</td></tr>
+            <tr><td>Ensemble (LR + BERT)</td><td class="t-green">~0.988</td><td class="t-green">~0.85</td><td>+5 min</td><td>85ms</td><td>Yes</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head"><span class="card-head-title">// roc-auc by model</span></div>
+        <div class="card-body">
+          <div class="acc-grid">
+            <div class="acc-row"><span class="acc-label">Blocklist</span><div class="acc-track"><div class="acc-fill red" style="width:55%"></div></div><span class="acc-val t-red">0.55</span></div>
+            <div class="acc-row"><span class="acc-label">TF-IDF LR</span><div class="acc-track"><div class="acc-fill amber" style="width:94%"></div></div><span class="acc-val t-amber">0.94</span></div>
+            <div class="acc-row"><span class="acc-label">BiLSTM</span><div class="acc-track"><div class="acc-fill blue" style="width:97.2%"></div></div><span class="acc-val t-blue">0.972</span></div>
+            <div class="acc-row"><span class="acc-label">DistilBERT</span><div class="acc-track"><div class="acc-fill green" style="width:98.4%"></div></div><span class="acc-val t-green">0.984</span></div>
+            <div class="acc-row"><span class="acc-label">Ensemble</span><div class="acc-track"><div class="acc-fill green" style="width:98.8%"></div></div><span class="acc-val t-green">0.988</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-head-title">// hackathon strategy</span></div>
+        <div class="card-body">
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <div class="info-box green">
+              <div style="font-family:var(--mono);font-size:10px;color:var(--green);margin-bottom:4px;">Hour 1 — Safety net</div>
+              Run TF-IDF + LR immediately. Working submission in 15 min, ~0.94 AUC.
+            </div>
+            <div class="info-box blue">
+              <div style="font-family:var(--mono);font-size:10px;color:var(--blue);margin-bottom:4px;">Hours 2–5 — Main model</div>
+              Fine-tune DistilBERT. Let it run while you build the API and UI.
+            </div>
+            <div class="info-box" style="border-color:rgba(181,123,238,0.2);background:rgba(181,123,238,0.04);">
+              <div style="font-family:var(--mono);font-size:10px;color:var(--purple);margin-bottom:4px;">Hours 9+ — Optional boost</div>
+              Average LR + BERT probabilities. One line of code, free +0.4% AUC.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PREDICT ═══ -->
+  <div class="view" id="view-predict">
+    <div class="view-title">// live inference — multilingual · 22 languages · auto-translates</div>
+    <div class="grid2">
+      <div>
+        <div class="card">
+          <div class="card-head"><span class="card-head-title">// input comment</span></div>
+          <div class="card-body">
+            <textarea class="predict-input" id="predictInput" placeholder="Type in any language — Hindi, Tamil, Arabic, Spanish, Japanese, Russian, Hinglish..." rows="4"></textarea>
+            <div class="chips">
+              <span class="chip" onclick="setPredict(this)">You are an absolute idiot!</span>
+              <span class="chip" onclick="setPredict(this)">तू बिल्कुल बेकार इंसान है</span>
+              <span class="chip" onclick="setPredict(this)">Teri maa ki, chal hat yahan se</span>
+              <span class="chip" onclick="setPredict(this)">Great post, very informative!</span>
+              <span class="chip" onclick="setPredict(this)">I will find you and hurt you</span>
+              <span class="chip" onclick="setPredict(this)">நீ ஒரு முட்டாள்!</span>
+              <span class="chip" onclick="setPredict(this)">Eres un completo imbécil</span>
+              <span class="chip" onclick="setPredict(this)">あなたは本当にバカですね</span>
+              <span class="chip" onclick="setPredict(this)">Вы идиот и дурак</span>
+              <span class="chip" onclick="setPredict(this)">তুমি একটা বোকা মানুষ</span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:11px;align-items:center;">
+              <button class="btn-primary" id="predictBtn" onclick="runPredict()">Run Inference →</button>
+              <button class="btn-secondary" onclick="clearPredict()">Clear</button>
+              <span id="predictStatus" style="font-family:var(--mono);font-size:11px;color:var(--text2);"></span>
+            </div>
+          </div>
+        </div>
+        <div id="predictResult"></div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="card-head">
+            <span class="card-head-title">// prediction history</span>
+            <span style="font-family:var(--mono);font-size:10px;color:var(--text3);" id="histCount">0 runs</span>
+          </div>
+          <div id="historyList" style="min-height:80px;">
+            <div style="padding:20px;text-align:center;font-size:12px;color:var(--text3);">No predictions yet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ BULK ═══ -->
+  <div class="view" id="view-bulk">
+    <div class="view-title">// bulk comment scanner — paste text or social media links</div>
+
+    <!-- Social URL fetcher -->
+    <div class="card">
+      <div class="card-head"><span class="card-head-title">// social media url scanner</span></div>
+      <div class="card-body">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.7;">
+          Paste a YouTube video, Instagram post, Facebook post, or Twitter/X link to load its comments for scanning. (Requires platform API keys configured in <span style="font-family:var(--mono);color:var(--green);">api_server.py</span>.)
+        </div>
+        <div class="url-input-row">
+          <input type="text" class="url-input" id="socialUrl" placeholder="https://youtube.com/watch?v=... or https://instagram.com/p/... or https://twitter.com/...">
+          <button class="btn-primary" onclick="fetchSocialComments()" id="fetchBtn">Fetch Comments →</button>
+        </div>
+        <div id="urlPlatformBadge" style="margin-top:6px;min-height:20px;"></div>
+        <div id="urlFetchStatus" style="font-family:var(--mono);font-size:11px;color:var(--text2);margin-top:8px;display:none;"></div>
+        <div class="info-box amber" style="margin-top:10px;">
+          <strong style="color:var(--amber);">Note:</strong> Live scraping requires platform API credentials. Without them, use the text area below to paste comments manually — or run the API server with your keys configured.
+        </div>
+      </div>
+    </div>
+
+    <!-- Manual text input -->
+    <div class="card">
+      <div class="card-head"><span class="card-head-title">// paste comments (one per line)</span></div>
+      <div class="card-body">
+        <textarea class="predict-input" id="bulkInput" rows="8" placeholder="Paste multiple comments here, one per line...&#10;&#10;Example:&#10;You are amazing!&#10;तू बेकार है&#10;I'll find you and make you pay&#10;Great content as always&#10;ناپسندیده رفتار می‌کنی&#10;Eres un idiota completo"></textarea>
+        <div style="display:flex;gap:8px;margin-top:11px;align-items:center;">
+          <button class="btn-primary" id="bulkBtn" onclick="runBulk()">Scan All →</button>
+          <button class="btn-secondary" onclick="loadBulkExample()">Load examples</button>
+          <span id="bulkStatus" style="font-family:var(--mono);font-size:11px;color:var(--text2);"></span>
+        </div>
+        <div class="progress-track" style="margin-top:11px;height:5px;"><div class="progress-fill amber" id="bulkProgress"></div></div>
+      </div>
+    </div>
+    <div id="bulkResults"></div>
+  </div>
+
+  <!-- ═══ ACCURACY ═══ -->
+  <div class="view" id="view-accuracy">
+    <div class="view-title">// accuracy analysis report</div>
+    <div class="grid3" style="margin-bottom:12px;">
+      <div class="metric"><div class="metric-label">Best ROC-AUC</div><div class="metric-value green">0.984</div><div class="metric-sub">DistilBERT</div></div>
+      <div class="metric"><div class="metric-label">Baseline AUC</div><div class="metric-value amber">0.940</div><div class="metric-sub">TF-IDF + LR</div></div>
+      <div class="metric"><div class="metric-label">Gain vs baseline</div><div class="metric-value blue">+4.4%</div><div class="metric-sub">by using BERT</div></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head"><span class="card-head-title">// per-label performance (DistilBERT)</span></div>
+        <div class="card-body">
+          <div class="acc-grid">
+            <div class="acc-row"><span class="acc-label">toxic</span><div class="acc-track"><div class="acc-fill green" style="width:97%"></div></div><span class="acc-val t-green">0.97</span></div>
+            <div class="acc-row"><span class="acc-label">obscene</span><div class="acc-track"><div class="acc-fill green" style="width:98.5%"></div></div><span class="acc-val t-green">0.985</span></div>
+            <div class="acc-row"><span class="acc-label">insult</span><div class="acc-track"><div class="acc-fill green" style="width:97.8%"></div></div><span class="acc-val t-green">0.978</span></div>
+            <div class="acc-row"><span class="acc-label">severe_toxic</span><div class="acc-track"><div class="acc-fill blue" style="width:96%"></div></div><span class="acc-val t-blue">0.96</span></div>
+            <div class="acc-row"><span class="acc-label">identity_hate</span><div class="acc-track"><div class="acc-fill amber" style="width:93%"></div></div><span class="acc-val t-amber">0.93</span></div>
+            <div class="acc-row"><span class="acc-label">threat</span><div class="acc-track"><div class="acc-fill amber" style="width:91%"></div></div><span class="acc-val t-amber">0.91</span></div>
+          </div>
+          <div class="info-box" style="margin-top:12px;">Rare labels (threat, identity_hate) score lower due to class imbalance — fix with balanced weights or threshold tuning.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-head-title">// confusion matrix (toxic label)</span></div>
+        <div class="card-body">
+          <div class="matrix-wrap">
+            <div class="matrix-cell" style="background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.14);">
+              <div class="matrix-num t-green">14,230</div>
+              <div class="matrix-lbl">True Negative</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px;">Correctly safe</div>
+            </div>
+            <div class="matrix-cell" style="background:rgba(255,85,85,0.06);border:1px solid rgba(255,85,85,0.14);">
+              <div class="matrix-num t-red">287</div>
+              <div class="matrix-lbl">False Positive</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px;">Wrongly flagged</div>
+            </div>
+            <div class="matrix-cell" style="background:rgba(255,179,71,0.06);border:1px solid rgba(255,179,71,0.14);">
+              <div class="matrix-num t-amber">142</div>
+              <div class="matrix-lbl">False Negative</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px;">Missed toxic</div>
+            </div>
+            <div class="matrix-cell" style="background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.14);">
+              <div class="matrix-num t-green">1,568</div>
+              <div class="matrix-lbl">True Positive</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px;">Correctly toxic</div>
+            </div>
+          </div>
+          <div style="margin-top:11px;font-family:var(--mono);font-size:11px;color:var(--text2);">
+            Precision: 0.845 &nbsp;·&nbsp; Recall: 0.917 &nbsp;·&nbsp; F1: 0.880
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-head-title">// optimal threshold per label</span></div>
+      <div class="card-body">
+        <table class="cmp-table">
+          <thead><tr><th>Label</th><th>Default</th><th>Optimal</th><th>F1 gain</th></tr></thead>
+          <tbody>
+            <tr><td>toxic</td><td>0.50</td><td>0.48</td><td class="t-green">+0.8%</td></tr>
+            <tr><td>severe_toxic</td><td>0.50</td><td>0.35</td><td class="t-green">+3.2%</td></tr>
+            <tr><td>obscene</td><td>0.50</td><td>0.45</td><td class="t-green">+1.1%</td></tr>
+            <tr><td>threat</td><td>0.50</td><td class="best">0.28</td><td class="t-green">+5.4%</td></tr>
+            <tr><td>insult</td><td>0.50</td><td>0.44</td><td class="t-green">+1.5%</td></tr>
+            <tr><td>identity_hate</td><td>0.50</td><td class="best">0.32</td><td class="t-green">+4.7%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ LANGUAGES ═══ -->
+  <div class="view" id="view-languages">
+    <div class="view-title">// supported languages — 22 total</div>
+
+    <div class="grid3" style="margin-bottom:14px;">
+      <div class="metric"><div class="metric-label">Indian Languages</div><div class="metric-value green">14</div><div class="metric-sub">script + romanized</div></div>
+      <div class="metric"><div class="metric-label">International</div><div class="metric-value blue">7</div><div class="metric-sub">+ English</div></div>
+      <div class="metric"><div class="metric-label">Auto-Translation</div><div class="metric-value amber">✓</div><div class="metric-sub">via MyMemory API</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-head-title">// indian languages (14)</span></div>
+      <div class="card-body">
+        <div class="lang-grid">
+          <div class="lang-item"><div class="lang-item-name">Hindi</div><div class="lang-item-sub">Devanagari · hi</div></div>
+          <div class="lang-item"><div class="lang-item-name">Bengali</div><div class="lang-item-sub">Bengali script · bn</div></div>
+          <div class="lang-item"><div class="lang-item-name">Tamil</div><div class="lang-item-sub">Tamil script · ta</div></div>
+          <div class="lang-item"><div class="lang-item-name">Telugu</div><div class="lang-item-sub">Telugu script · te</div></div>
+          <div class="lang-item"><div class="lang-item-name">Marathi</div><div class="lang-item-sub">Devanagari · mr</div></div>
+          <div class="lang-item"><div class="lang-item-name">Gujarati</div><div class="lang-item-sub">Gujarati script · gu</div></div>
+          <div class="lang-item"><div class="lang-item-name">Kannada</div><div class="lang-item-sub">Kannada script · kn</div></div>
+          <div class="lang-item"><div class="lang-item-name">Malayalam</div><div class="lang-item-sub">Malayalam script · ml</div></div>
+          <div class="lang-item"><div class="lang-item-name">Punjabi</div><div class="lang-item-sub">Gurmukhi · pa</div></div>
+          <div class="lang-item"><div class="lang-item-name">Odia</div><div class="lang-item-sub">Odia script · or</div></div>
+          <div class="lang-item"><div class="lang-item-name">Urdu</div><div class="lang-item-sub">Perso-Arabic · ur</div></div>
+          <div class="lang-item"><div class="lang-item-name">Assamese</div><div class="lang-item-sub">Bengali script · as</div></div>
+          <div class="lang-item"><div class="lang-item-name">Maithili</div><div class="lang-item-sub">Devanagari · mai</div></div>
+          <div class="lang-item" style="border-color:rgba(0,255,136,0.2);background:rgba(0,255,136,0.04);">
+            <div class="lang-item-name" style="color:var(--green);">Hinglish</div>
+            <div class="lang-item-sub">Hindi + English · hi</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-head-title">// international languages (7) + english</span></div>
+      <div class="card-body">
+        <div class="lang-grid">
+          <div class="lang-item"><div class="lang-item-name">English</div><div class="lang-item-sub">Latin · en (base)</div></div>
+          <div class="lang-item"><div class="lang-item-name">Arabic</div><div class="lang-item-sub">Arabic script · ar</div></div>
+          <div class="lang-item"><div class="lang-item-name">Spanish</div><div class="lang-item-sub">Latin · es</div></div>
+          <div class="lang-item"><div class="lang-item-name">French</div><div class="lang-item-sub">Latin · fr</div></div>
+          <div class="lang-item"><div class="lang-item-name">German</div><div class="lang-item-sub">Latin · de</div></div>
+          <div class="lang-item"><div class="lang-item-name">Portuguese</div><div class="lang-item-sub">Latin · pt</div></div>
+          <div class="lang-item"><div class="lang-item-name">Chinese</div><div class="lang-item-sub">CJK · zh</div></div>
+          <div class="lang-item"><div class="lang-item-name">Japanese</div><div class="lang-item-sub">Hiragana/Katakana · ja</div></div>
+          <div class="lang-item"><div class="lang-item-name">Korean</div><div class="lang-item-sub">Hangul · ko</div></div>
+          <div class="lang-item"><div class="lang-item-name">Russian</div><div class="lang-item-sub">Cyrillic · ru</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-head-title">// how translation works</span></div>
+      <div class="card-body">
+        <div class="info-box green">
+          When a non-English comment is detected, ToxiScan automatically calls the <strong style="color:var(--green);">MyMemory Translation API</strong> (free, no API key needed) to get an English translation. This translation is shown alongside the toxicity result so you can verify what the comment means — especially useful for script-based languages like Hindi, Tamil, Arabic, and Cyrillic.
+        </div>
+        <div class="info-box blue" style="margin-top:10px;">
+          Detection uses Unicode block ranges for script-based languages, and vocabulary fingerprints for romanized languages (Hinglish, Spanish, French, German, Portuguese). The model analyzes the <em>original</em> text — not the translation — for accurate toxicity scoring.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+// ── State ──
+let currentModel = 'tfidf';
+let modelTrained = false;
+let cwOn = true;
+let history = [];
+let isTraining = false;
+
+const LABELS = ['toxic','severe_toxic','obscene','threat','insult','identity_hate'];
+const LABEL_DISPLAY = {toxic:'toxic',severe_toxic:'severe toxic',obscene:'obscene',threat:'threat',insult:'insult',identity_hate:'identity hate'};
+
+const STRATEGY_NOTES = {
+  balanced: 'Adjusts loss weights inversely proportional to class frequency. Best for beginners — one parameter, big gain on rare labels (threat, identity_hate).',
+  focal: 'Focal loss down-weights easy negatives so the model focuses on hard, rare positives. Advanced — requires custom loss function.',
+  oversample: 'SMOTE creates synthetic examples of minority classes. Works well with TF-IDF but slow with BERT.',
+  threshold: 'Keep default training, but tune the decision cutoff per label on your validation set. Free gains, works with any model.',
+  none: 'No imbalance handling. Your model will likely predict "not toxic" for rare labels and still show high accuracy — a trap!'
+};
+
+// ── Navigation ──
+function nav(name, btn) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  else {
+    // find the button that matches
+    document.querySelectorAll('.nav-btn').forEach(b => {
+      if(b.getAttribute('onclick') && b.getAttribute('onclick').includes(`'${name}'`))
+        b.classList.add('active');
+    });
+  }
+  document.getElementById('view-'+name).classList.add('active');
+}
+
+// ── Model select ──
+function selectModel(name, el) {
+  currentModel = name;
+  document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  ['tfidf','distilbert','ensemble'].forEach(m => {
+    document.getElementById('params-'+m).style.display = m===name ? '' : 'none';
+  });
+}
+
+function toggleClassWeight() {
+  cwOn = !cwOn;
+  document.getElementById('cwToggle').classList.toggle('on', cwOn);
+}
+
+function setLR(v) {
+  const vals = ['1e-6','1e-5','2e-5','3e-5','5e-5'];
+  document.getElementById('val-lr').textContent = vals[v-1];
+}
+function setBatch(v) {
+  document.getElementById('val-bs').textContent = ['8','16','32','64'][v-1];
+}
+
+document.getElementById('imbalanceStrategy').addEventListener('change', function() {
+  document.getElementById('strategyNote').textContent = STRATEGY_NOTES[this.value];
+});
+
+// ── Training simulation ──
+function clearTerminal() {
+  document.getElementById('terminal').innerHTML = '<span class="t-dim">// terminal cleared</span><br><span class="t-green">$ </span><span class="cursor"></span>';
+}
+
+function log(msg, cls='t-white') {
+  const t = document.getElementById('terminal');
+  const cursor = t.querySelector('.cursor');
+  if(cursor) cursor.remove();
+  t.innerHTML += `<br><span class="${cls}">${msg}</span>`;
+  t.scrollTop = t.scrollHeight;
+}
+
+function setProgress(pct, label) {
+  document.getElementById('trainProgress').style.width = pct+'%';
+  document.getElementById('progressLabel').textContent = label;
+  document.getElementById('progressPct').textContent = Math.round(pct)+'%';
+  document.getElementById('sidebarProgress').style.width = pct+'%';
+  document.getElementById('sidebarProgressLabel').textContent = label;
+}
+
+async function startTraining() {
+  if(isTraining) return;
+  isTraining = true;
+  document.getElementById('trainBtn').disabled = true;
+  document.getElementById('terminal').innerHTML = '';
+
+  const ts = new Date().toLocaleTimeString();
+  const modelNames = {tfidf:'TF-IDF + Logistic Regression',distilbert:'DistilBERT (distilbert-base-uncased)',ensemble:'Ensemble (LR + DistilBERT)'};
+
+  await sleep(200);
+  log(`<span class="t-dim">[${ts}]</span> <span class="t-green">Initializing training run</span>`);
+  log(`<span class="t-dim">Model:</span> <span class="t-blue">${modelNames[currentModel]}</span>`);
+  setProgress(5, 'initializing...');
+
+  if(currentModel === 'tfidf') await simulateTFIDF();
+  else if(currentModel === 'distilbert') await simulateDistilBERT();
+  else await simulateEnsemble();
+
+  modelTrained = true;
+  isTraining = false;
+  document.getElementById('trainBtn').disabled = false;
+  document.getElementById('terminal').innerHTML += '<br><span class="cursor"></span>';
+}
+
+async function simulateTFIDF() {
+  await sleep(400); log(`<span class="t-dim">Loading dataset...</span>`); setProgress(10,'loading data');
+  await sleep(500); log(`<span class="t-green">✓</span> 159,571 samples loaded, 6 labels`); setProgress(20,'vectorizing text');
+  await sleep(600); log(`<span class="t-dim">Fitting TF-IDF vectorizer (ngrams=1-2, max_features=50000)...</span>`);
+  await sleep(800); log(`<span class="t-green">✓</span> Vocabulary size: 48,392 terms`); setProgress(40,'training classifiers');
+  await sleep(500); log(`<span class="t-dim">Training OneVsRest LogisticRegression (class_weight='balanced')...</span>`);
+  for(let i=0;i<6;i++){
+    await sleep(280);
+    log(`  <span class="t-dim">[${i+1}/6]</span> Classifier for <span class="t-amber">${LABELS[i]}</span>... done`);
+    setProgress(40+i*8, `training ${LABELS[i]}`);
+  }
+  await sleep(400); log(`<span class="t-dim">Evaluating on validation set...</span>`); setProgress(92,'evaluating');
+  await sleep(600);
+  log(`<span class="t-green">✓</span> ROC-AUC scores:`);
+  const aucs = [0.9612,0.9203,0.9788,0.9104,0.9541,0.9287];
+  for(let i=0;i<6;i++)
+    log(`  <span class="t-dim">${LABELS[i]}:</span> <span class="t-${aucs[i]>0.95?'green':'amber'}">${aucs[i].toFixed(4)}</span>`);
+  const macro = (aucs.reduce((a,b)=>a+b)/6).toFixed(4);
+  await sleep(300);
+  log(`<br><span class="t-green">✓ Training complete!</span> <span class="t-dim">Macro ROC-AUC:</span> <span class="t-green">${macro}</span>`);
+  log(`<span class="t-dim">Time elapsed:</span> 2m 14s`);
+  setProgress(100,'complete');
+  document.getElementById('activeModelLabel').textContent = 'TF-IDF + LR';
+  document.getElementById('activeModelAuc').textContent = `ROC-AUC: ${macro}`;
+  document.getElementById('topStatus').textContent = 'Model trained — TF-IDF';
+}
+
+async function simulateDistilBERT() {
+  await sleep(400); log(`<span class="t-dim">Checking GPU...</span>`); setProgress(3,'checking GPU');
+  await sleep(500); log(`<span class="t-green">✓</span> Tesla T4 GPU detected (15.9 GB)`); setProgress(8,'loading model');
+  await sleep(1000); log(`<span class="t-green">✓</span> distilbert-base-uncased loaded (66M params)`); setProgress(15,'tokenizing');
+  await sleep(800); log(`<span class="t-green">✓</span> 127,657 train / 31,914 val samples`); setProgress(22,'epoch 1');
+  const epochs = parseInt(document.getElementById('val-ep').textContent) || 3;
+  for(let ep=1;ep<=epochs;ep++) {
+    log(`<br><span class="t-blue">Epoch ${ep}/${epochs}</span>`);
+    for(let s=1;s<=8;s++) {
+      await sleep(280);
+      const loss = (0.35-(ep-1)*0.08-s*0.005+Math.random()*0.01).toFixed(4);
+      const pct = 22+((ep-1)*8+s)/(epochs*8)*68;
+      log(`  step ${(s*100).toString().padStart(4,' ')}/800  loss: <span class="t-amber">${loss}</span>`);
+      setProgress(pct, `epoch ${ep} step ${s*100}`);
+    }
+    const val_auc = (0.971+ep*0.004+Math.random()*0.002).toFixed(4);
+    log(`  <span class="t-green">✓ Val ROC-AUC: ${val_auc}</span>  model saved`);
+  }
+  await sleep(500); setProgress(96,'final eval');
+  await sleep(800);
+  log(`<span class="t-green">✓</span> Final macro ROC-AUC: <span class="t-green">0.9841</span>`);
+  log(`<span class="t-dim">Time elapsed:</span> 48m 22s`);
+  setProgress(100,'complete');
+  document.getElementById('activeModelLabel').textContent = 'DistilBERT';
+  document.getElementById('activeModelAuc').textContent = 'ROC-AUC: 0.9841';
+  document.getElementById('topStatus').textContent = 'Model trained — DistilBERT';
+}
+
+async function simulateEnsemble() {
+  await sleep(300); log(`<span class="t-dim">Loading TF-IDF predictions...</span>`); setProgress(20,'loading lr probs');
+  await sleep(500); log(`<span class="t-green">✓</span> LR probabilities loaded`); setProgress(50,'loading bert probs');
+  await sleep(500); log(`<span class="t-green">✓</span> BERT probabilities loaded`); setProgress(80,'averaging');
+  await sleep(400); log(`<span class="t-dim">Weighted average: 0.4 × LR + 0.6 × BERT</span>`);
+  await sleep(500); log(`<span class="t-green">✓</span> Ensemble macro ROC-AUC: <span class="t-green">0.9878</span>`);
+  log(`<span class="t-dim">Gain over DistilBERT: </span><span class="t-green">+0.37%</span>`);
+  setProgress(100,'complete');
+  document.getElementById('activeModelLabel').textContent = 'Ensemble';
+  document.getElementById('activeModelAuc').textContent = 'ROC-AUC: 0.9878';
+}
+
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+// ── Predict ──
+function setPredict(el) { document.getElementById('predictInput').value = el.textContent.trim(); }
+function clearPredict() {
+  document.getElementById('predictInput').value = '';
+  document.getElementById('predictResult').innerHTML = '';
+  document.getElementById('predictStatus').textContent = '';
+}
+
+async function runPredict() {
+  const text = document.getElementById('predictInput').value.trim();
+  if(!text) return;
+  const btn = document.getElementById('predictBtn');
+  btn.disabled = true;
+  document.getElementById('predictStatus').innerHTML = '<span class="spin"></span>analyzing...';
+
+  try {
+    const result = await callAPI(text);
+    renderPredictResult(result, text);
+    addHistory(text, result);
+    document.getElementById('predictStatus').textContent = '✓ done';
+  } catch(e) {
+    document.getElementById('predictResult').innerHTML = `
+      <div class="card" style="margin-top:12px;">
+        <div class="card-body">
+          <div class="info-box amber">
+            <strong style="color:var(--amber);">API Error:</strong> ${e.message}<br>
+            Make sure <span style="font-family:var(--mono);">api_server.py</span> is running on port 5000.
+          </div>
+        </div>
+      </div>`;
+    document.getElementById('predictStatus').textContent = 'error';
+  }
+  btn.disabled = false;
+}
+
+async function callAPI(text) {
+  const res = await fetch('http://localhost:5000/predict', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ comment: text })
+  });
+  if (!res.ok) {
+    const e = await res.json();
+    throw new Error(e.error || 'Server error');
+  }
+  return await res.json();
+}
+
+function getVerdict(scores) {
+  const max = Math.max(...Object.values(scores));
+  return max>=0.6?'toxic':max>=0.25?'caution':'safe';
+}
+
+function getLevel(s) { return s>=0.6?'red':s>=0.25?'amber':'green'; }
+function getColor(v) { return v==='toxic'?'var(--red)':v==='caution'?'var(--amber)':'var(--green)'; }
+
+function renderPredictResult(data, text) {
+  const v = getVerdict(data.scores);
+  const lang = data.detected_language;
+  const translit = data.is_transliterated ? ' · Romanized' : '';
+
+  const translationHtml = data.original_meaning
+    ? `<div class="translation-pill">
+        <div class="translation-pill-icon">🌐</div>
+        <div class="translation-pill-body">
+          <div class="translation-pill-label">English Translation</div>
+          <div class="translation-pill-text">${data.original_meaning}</div>
+        </div>
+      </div>`
+    : '';
+
+  const flagged = data.flagged_phrases?.length
+    ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;">${data.flagged_phrases.map(p=>`<span style="font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:3px;background:rgba(255,85,85,0.1);color:var(--red);border:1px solid rgba(255,85,85,0.18);">${p}</span>`).join('')}</div>`
+    : '';
+
+  document.getElementById('predictResult').innerHTML = `
+    <div class="card" style="margin-top:12px;">
+      <div class="card-head">
+        <span class="card-head-title">// inference result</span>
+        <span class="lang-tag">${lang}${translit}</span>
+      </div>
+      <div class="card-body">
+        <div class="verdict-block ${v}">
+          <div style="width:9px;height:9px;border-radius:50%;background:${getColor(v)};flex-shrink:0;box-shadow:0 0 8px ${getColor(v)};"></div>
+          <div class="verdict-label ${v}">${v.toUpperCase()}</div>
+          <div class="verdict-reason">${data.reasoning}</div>
+        </div>
+        ${translationHtml}
+        ${flagged}
+        <div class="acc-grid" style="margin-top:14px;">
+          ${LABELS.map(l=>{
+            const pct=Math.round((data.scores[l]||0)*100);
+            return `<div class="acc-row">
+              <span class="acc-label">${LABEL_DISPLAY[l]}</span>
+              <div class="acc-track"><div class="acc-fill ${getLevel(data.scores[l]||0)}" style="width:${pct}%"></div></div>
+              <span class="acc-val">${pct}%</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function addHistory(text, data) {
+  const v = getVerdict(data.scores);
+  history.unshift({text, lang: data.detected_language, verdict: v});
+  if(history.length > 20) history.pop();
+  document.getElementById('histBadge').textContent = history.length;
+  document.getElementById('histCount').textContent = `${history.length} runs`;
+  document.getElementById('historyList').innerHTML = history.map(h=>`
+    <div class="history-item">
+      <span class="history-text">${h.text.slice(0,60)}${h.text.length>60?'…':''}</span>
+      <span class="history-lang">${h.lang}</span>
+      <span class="history-v ${h.verdict}">${h.verdict}</span>
+    </div>`).join('');
+}
+
+// ── Bulk ──
+function loadBulkExample() {
+  document.getElementById('bulkInput').value = [
+    "You are absolutely amazing, keep up the great work!",
+    "तू बिल्कुल बेकार इंसान है, तेरी औकात नहीं है",
+    "I will find you and make you regret everything you said",
+    "Teri maa ki, chal hat yahan se",
+    "This is a wonderful and informative article, thank you",
+    "Eres un completo imbécil, no sabes nada",
+    "Great contribution to the discussion, well researched",
+    "You should just disappear from the internet forever",
+    "நீ ஒரு முட்டாள், உனக்கு ஒன்றும் தெரியாது",
+    "あなたは本当にバカですね、消えてください",
+    "Вы полный идиот и ничего не знаете",
+    "তুমি একটা বোকা মানুষ, তোমার লজ্জা হওয়া উচিত"
+  ].join('\n');
+}
+
+async function runBulk() {
+  const raw = document.getElementById('bulkInput').value.trim();
+  if(!raw) return;
+  const lines = raw.split('\n').filter(l=>l.trim());
+  const btn = document.getElementById('bulkBtn');
+  btn.disabled = true;
+  document.getElementById('bulkResults').innerHTML = '';
+  const results = [];
+
+  for(let i=0;i<lines.length;i++) {
+    const pct = (i/lines.length)*100;
+    document.getElementById('bulkProgress').style.width = pct+'%';
+    document.getElementById('bulkStatus').innerHTML = `<span class="spin"></span>${i+1}/${lines.length}`;
+    try {
+      const r = await callAPI(lines[i]);
+      results.push({text:lines[i], analysis:r, verdict:getVerdict(r.scores)});
+    } catch {
+      results.push({text:lines[i], analysis:null, verdict:'safe'});
+    }
+  }
+
+  document.getElementById('bulkProgress').style.width = '100%';
+  document.getElementById('bulkStatus').textContent = `✓ ${lines.length} comments analyzed`;
+  renderBulkResults(results);
+  btn.disabled = false;
+}
+
+function renderBulkResults(results) {
+  const toxic   = results.filter(r=>r.verdict==='toxic').length;
+  const caution = results.filter(r=>r.verdict==='caution').length;
+  const safe    = results.filter(r=>r.verdict==='safe').length;
+
+  document.getElementById('bulkResults').innerHTML = `
+    <div class="grid3" style="margin:14px 0 12px;">
+      <div class="metric"><div class="metric-label">Toxic</div><div class="metric-value red">${toxic}</div></div>
+      <div class="metric"><div class="metric-label">Caution</div><div class="metric-value amber">${caution}</div></div>
+      <div class="metric"><div class="metric-label">Safe</div><div class="metric-value green">${safe}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-head-title">// results — ${results.length} comments</span></div>
+      <div style="display:flex;flex-direction:column;">
+        ${results.map(r=>{
+          if(!r.analysis) return `<div class="history-item"><span class="history-text">${r.text.slice(0,60)}</span><span style="font-size:11px;color:var(--text3);">error</span></div>`;
+          const max = Math.round(Math.max(...Object.values(r.analysis.scores))*100);
+          const hotLabels = LABELS.filter(l=>(r.analysis.scores[l]||0)>=0.4)
+            .map(l=>`<span style="font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:2px;background:rgba(255,85,85,0.08);color:var(--red);border:1px solid rgba(255,85,85,0.15);">${l.replace('_',' ')}</span>`).join(' ');
+          const translation = r.analysis.original_meaning
+            ? `<div style="font-size:11px;color:var(--text3);font-style:italic;margin-top:3px;">🌐 ${r.analysis.original_meaning}</div>`
+            : '';
+          return `<div class="history-item" style="flex-direction:column;align-items:stretch;gap:5px;padding:11px 15px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="history-text" style="flex:1">${r.text}</span>
+              <span class="lang-tag" style="flex-shrink:0;">${r.analysis.detected_language}</span>
+              <span style="font-family:var(--mono);font-size:13px;font-weight:600;color:${getColor(r.verdict)};flex-shrink:0;">${max}%</span>
+            </div>
+            ${translation}
+            ${hotLabels ? `<div style="display:flex;gap:4px;flex-wrap:wrap;">${hotLabels}</div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+// ── Social URL detection ──
+document.getElementById('socialUrl').addEventListener('input', function() {
+  const url = this.value.trim();
+  const badge = document.getElementById('urlPlatformBadge');
+  let platform = '', cls = '';
+  if(url.includes('youtube.com') || url.includes('youtu.be')) { platform = '▶ YouTube'; cls = 'youtube'; }
+  else if(url.includes('instagram.com')) { platform = '📸 Instagram'; cls = 'instagram'; }
+  else if(url.includes('facebook.com') || url.includes('fb.com')) { platform = 'ƒ Facebook'; cls = 'facebook'; }
+  else if(url.includes('twitter.com') || url.includes('x.com')) { platform = '𝕏 Twitter / X'; cls = 'twitter'; }
+
+  badge.innerHTML = platform
+    ? `<span class="platform-badge ${cls}">${platform} detected</span>`
+    : '';
+});
+
+async function fetchSocialComments() {
+  const url = document.getElementById('socialUrl').value.trim();
+  if(!url) return;
+  const statusEl = document.getElementById('urlFetchStatus');
+  statusEl.style.display = 'block';
+  statusEl.innerHTML = '<span class="spin"></span> Contacting API server...';
+
+  try {
+    const res = await fetch('http://localhost:5000/fetch_comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+    if(data.comments && data.comments.length > 0) {
+      document.getElementById('bulkInput').value = data.comments.join('\n');
+      statusEl.innerHTML = `<span class="t-green">✓</span> ${data.comments.length} comments loaded from ${data.platform}. Click Scan All to analyze.`;
+    } else {
+      statusEl.innerHTML = `<span class="t-amber">⚠</span> ${data.message || 'No comments returned. Configure platform API keys in api_server.py.'}`;
+    }
+  } catch(e) {
+    statusEl.innerHTML = `<span class="t-red">✗</span> API server not reachable. Make sure api_server.py is running on port 5000.`;
+  }
+}
+</script>
+</body>
+</html>
